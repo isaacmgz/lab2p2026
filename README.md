@@ -1,55 +1,64 @@
-[![CI/CD Pipeline](https://github.com/diegobotia/lab2p2026/actions/workflows/build.yml/badge.svg)](https://github.com/diegobotia/lab2p2026/actions/workflows/build.yml)
-[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=coverage)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Maintainability issues](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=software_quality_maintainability_issues)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=diegobotia_lab2p2026&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=diegobotia_lab2p2026)
+[![CI/CD Pipeline](https://github.com/isaacmgz/lab2p2026/actions/workflows/build.yml/badge.svg)](https://github.com/isaacmgz/lab2p2026/actions/workflows/build.yml)
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=isaacmgz_lab2p2026&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=isaacmgz_lab2p2026)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=isaacmgz_lab2p2026&metric=coverage)](https://sonarcloud.io/summary/new_code?id=isaacmgz_lab2p2026)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=isaacmgz_lab2p2026&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=isaacmgz_lab2p2026)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=isaacmgz_lab2p2026&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=isaacmgz_lab2p2026)
+[![Known Vulnerabilities](https://snyk.io/test/github/isaacmgz/lab2p2026/badge.svg)](https://snyk.io/test/github/isaacmgz/lab2p2026)
 
 # lab2p2026
 
-Implementation of a Simple App with the next operations:
+Spring Boot REST API that returns random data generated with Java Faker, delivered through a CI/CD pipeline
+(GitHub Actions → SonarCloud → Docker Hub → Render).
 
-* Get random nations
-* Get random currencies
-* Get random Aircraft
-* Get application version
-* health check
+**Live service:** https://lab2p2026-latest-dg3g.onrender.com
 
-Including integration with GitHub Actions, Sonarqube (SonarCloud), Coveralls and Snyk
+## Endpoints
 
-### Folders Structure
+| Method | Path | Response |
+|---|---|---|
+| GET | `/` | Health check (`HEALTH CHECK OK!`) |
+| GET | `/version` | Application version |
+| GET | `/commit` | Git commit SHA of the running image (used by the deploy smoke test) |
+| GET | `/nations` | 10 random nations |
+| GET | `/currencies` | 20 random currencies |
+| GET | `/aviation` | 20 random aircraft/airport/METAR entries |
 
-In the folder `src` is located the main code of the app
-
-In the folder `test` is located the unit tests
-
-### How to install it
-
-Execute:
+## Run locally
 
 ```shell
-$ mvnw spring-boot:run
+./mvnw spring-boot:run          # http://localhost:8080
+./mvnw clean verify             # tests + JaCoCo report in target/site/jacoco
+./mvnw test -Dtest=TesterApplicationTests#health   # single test
 ```
-to download the node dependencies
 
-### How to test it
-
-Execute:
+With Docker:
 
 ```shell
-$ mvnw clean install
+docker build -t lab2p2026 .
+docker run -p 8080:8080 lab2p2026
 ```
 
-### How to get coverage test
+The app listens on `$PORT` when set (Render), otherwise on `8080`.
 
-Execute:
+## CI/CD pipeline
 
-```shell
-$ mvwn -B package -DskipTests --file pom.xml
+Defined in [`.github/workflows/build.yml`](.github/workflows/build.yml):
+
+```
+tests → sonar → build (JAR artifact) → docker (push :latest and :<sha>) → deploy (Render + live-commit smoke test)
 ```
 
+- Every push to `main`, `feature/**`, `docs/**` and every PR into `main` runs tests, SonarCloud analysis and the JAR build.
+- Only `main` publishes the Docker image and deploys it.
+- Branching follows **trunk-based development**: short-lived branches merged into `main` through pull requests.
 
+Required repository configuration:
+
+| Kind | Name | Purpose |
+|---|---|---|
+| Secret | `SONAR_TOKEN` | SonarCloud analysis |
+| Secret | `DOCKER_USERNAME` / `DOCKER_PASSWORD` | Docker Hub push (use an access token) |
+| Secret | `RENDER_DEPLOY_HOOK_URL` | Triggers the Render deploy |
+| Variable | `RENDER_SERVICE_URL` | Public URL used by the smoke test |
+
+See [`docs/ENTREGA.md`](docs/ENTREGA.md) for the step-by-step setup and execution evidence.
