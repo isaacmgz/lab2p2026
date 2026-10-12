@@ -62,6 +62,11 @@ class TesterApplicationTests {
 		assertTrue(executionTime < 2000); // 2 second threshold
 	}
 	@Test
+	void commitDefaultsToUnknown() {
+		assertEquals("unknown", dataController.commit());
+	}
+
+	@Test
 	void aviationsLength() {
 		Integer aviationsLength = dataController.getRandomnAviation().size();
 		assertEquals(20, aviationsLength);
