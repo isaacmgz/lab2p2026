@@ -18,6 +18,7 @@ Spring Boot REST API that returns random data generated with Java Faker, deliver
 |---|---|---|
 | GET | `/` | Health check (`HEALTH CHECK OK!`) |
 | GET | `/version` | Application version |
+| GET | `/commit` | Git commit SHA of the running image (used by the deploy smoke test) |
 | GET | `/nations` | 10 random nations |
 | GET | `/currencies` | 20 random currencies |
 | GET | `/aviation` | 20 random aircraft/airport/METAR entries |
@@ -44,7 +45,7 @@ The app listens on `$PORT` when set (Render), otherwise on `8080`.
 Defined in [`.github/workflows/build.yml`](.github/workflows/build.yml):
 
 ```
-tests → sonar → build (JAR artifact) → docker (push :latest and :<sha>) → deploy (Render + smoke test)
+tests → sonar → build (JAR artifact) → docker (push :latest and :<sha>) → deploy (Render + live-commit smoke test)
 ```
 
 - Every push to `main`, `feature/**`, `docs/**` and every PR into `main` runs tests, SonarCloud analysis and the JAR build.
