@@ -9,7 +9,7 @@ Repository: https://github.com/isaacmgz/lab2p2026 (fork of `diegobotia/lab2p2026
 |---|---|
 | Connect the pipeline to a cloud provider | **Render** web service running the Docker image published to Docker Hub |
 | Deploy the JAR in an application container | `docker` job builds the image that packages `lab2p2026.jar`; `deploy` job tells Render to run that exact image (`:<commit-sha>`) |
-| Trunk-based PRs with at least one extra branch, configured in `build.yml` | Short-lived branches `feature/setup-accounts`, `feature/cloud-deploy`, `docs/readme` merged into `main` via PRs; `build.yml` triggers on `feature/**` and `docs/**` |
+| Trunk-based PRs with at least one extra branch, configured in `build.yml` | Short-lived branches `feature/setup-accounts`, `fix/pin-docker-actions`, `feature/cloud-deploy`, `docs/readme` merged into `main` via PRs; `build.yml` triggers on pushes to `feature/**` and `docs/**` and on every PR into `main` |
 | Step-by-step and cloud execution evidence | This document and `docs/evidence/` |
 
 ## 2. Pipeline
@@ -41,35 +41,42 @@ tests ──► sonar ──► build ──► docker ──► deploy
 1. **SonarCloud**: imported the repository, disabled *Automatic Analysis*, generated a token and stored it as the `SONAR_TOKEN` secret.
 2. **Docker Hub**: created an access token; stored `DOCKER_USERNAME` and `DOCKER_PASSWORD` secrets.
 3. **Render**:
-   - New → Web Service → *Existing image* → `docker.io/<DOCKER_USERNAME>/lab2p2026:latest`, Free instance.
+   - New → Web Service → *Existing image* → `docker.io/isaacmgz/lab2p2026:latest`, Free instance.
    - Settings → Deploy Hook: copied the URL into the `RENDER_DEPLOY_HOOK_URL` secret.
    - Stored the public service URL in the `RENDER_SERVICE_URL` repository variable.
 4. **Snyk**: imported the repository to get the vulnerability badge.
 
 ### 3.4 Cloud deployment (`feature/cloud-deploy`)
 Added the `deploy` job, which:
-1. Calls the Render deploy hook with `imgURL=docker.io/<user>/lab2p2026:<sha>`, so Render runs the exact image built for that commit.
+1. Calls the Render deploy hook with `imgURL=docker.io/isaacmgz/lab2p2026:<sha>`, so Render runs the exact image built for that commit.
 2. Polls the public URL until `/` answers `HEALTH CHECK OK!` (free instances cold-start), then prints `/version`.
 
-### 3.5 Trunk-based flow
+### 3.5 Issues found and fixed
+| Issue | Cause | Fix |
+|---|---|---|
+| SonarCloud quality gate failed (security rating C) | Rule `githubactions:S7637`: third-party actions referenced by mutable tag | Pinned `docker/login-action` and `docker/build-push-action` to full commit SHA (PR #2) |
+| Docker push `unauthorized: access token has insufficient scopes` | Docker Hub token created as read-only | Regenerated token with Read & Write scope |
+
+### 3.6 Trunk-based flow
 Each change was made on a short-lived branch, validated by the pipeline on its PR (tests, Sonar, build), and merged into `main`, which triggers the image publication and the deployment.
 
 | PR | Branch | Content |
 |---|---|---|
 | #1 | `feature/setup-accounts` | Accounts, triggers and pipeline modernization |
-| #2 | `feature/cloud-deploy` | Render deployment job |
-| #3 | `docs/readme` | README and this document |
+| #2 | `fix/pin-docker-actions` | Pin third-party actions to commit SHA (fixes SonarCloud security rating) |
+| #3 | `feature/cloud-deploy` | Render deployment job |
+| #4 | `docs/readme` | README and this document |
 
 ## 4. Execution evidence
 
-Tests against the deployed backend (replace with the real URL):
+Tests against the deployed backend :
 
 ```shell
-curl https://<RENDER_SERVICE_URL>/
-curl https://<RENDER_SERVICE_URL>/version
-curl https://<RENDER_SERVICE_URL>/nations
-curl https://<RENDER_SERVICE_URL>/currencies
-curl https://<RENDER_SERVICE_URL>/aviation
+curl https://lab2p2026-latest-dg3g.onrender.com/
+curl https://lab2p2026-latest-dg3g.onrender.com/version
+curl https://lab2p2026-latest-dg3g.onrender.com/nations
+curl https://lab2p2026-latest-dg3g.onrender.com/currencies
+curl https://lab2p2026-latest-dg3g.onrender.com/aviation
 ```
 
 Screenshots in `docs/evidence/`:

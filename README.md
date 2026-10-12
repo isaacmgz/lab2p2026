@@ -10,7 +10,7 @@
 Spring Boot REST API that returns random data generated with Java Faker, delivered through a CI/CD pipeline
 (GitHub Actions → SonarCloud → Docker Hub → Render).
 
-**Live service:** `<RENDER_SERVICE_URL>`
+**Live service:** https://lab2p2026-latest-dg3g.onrender.com
 
 ## Endpoints
 
