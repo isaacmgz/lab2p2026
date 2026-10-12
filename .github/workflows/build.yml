@@ -104,6 +104,8 @@ jobs:
           context: .
           file: Dockerfile
           push: true
+          build-args: |
+            APP_COMMIT=${{ github.sha }}
           tags: |
             docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -123,19 +125,23 @@ jobs:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           IMAGE: docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         run: curl -fsS -X POST --get "$RENDER_DEPLOY_HOOK_URL" --data-urlencode "imgURL=$IMAGE"
-      #Free instances cold-start and the new image takes a while to roll out, so poll until it answers
+      #Render keeps serving the previous instance during rollout, so wait until /commit reports this exact SHA
       - name: Smoke test deployed service
         env:
           SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
+          EXPECTED_COMMIT: ${{ github.sha }}
         run: |
           for attempt in $(seq 1 30); do
-            if curl -fsS --max-time 30 "$SERVICE_URL/" | grep -q "HEALTH CHECK OK!"; then
+            live_commit=$(curl -fsS --max-time 30 "$SERVICE_URL/commit" || true)
+            if [ "$live_commit" = "$EXPECTED_COMMIT" ]; then
+              echo "Live commit: $live_commit"
+              curl -fsS "$SERVICE_URL/" | grep -q "HEALTH CHECK OK!"
               curl -fsS "$SERVICE_URL/version"
               echo
               exit 0
             fi
-            echo "Attempt $attempt: service not ready, retrying in 20s"
+            echo "Attempt $attempt: live commit '${live_commit:-none}', waiting for $EXPECTED_COMMIT"
             sleep 20
           done
-          echo "Service did not become healthy" >&2
+          echo "Deployed commit never went live" >&2
           exit 1

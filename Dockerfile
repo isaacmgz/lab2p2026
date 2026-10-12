@@ -7,6 +7,9 @@ RUN mvn -B clean package -DskipTests
 
 FROM docker.io/library/eclipse-temurin:17-jre-jammy
 WORKDIR /app
+# Commit SHA passed by CI so the running app can report which version it is
+ARG APP_COMMIT=unknown
+ENV APP_COMMIT=${APP_COMMIT}
 # Copy the JAR from the 'build' stage
 COPY --from=build /app/target/lab2p2026.jar lab2p2026.jar
 EXPOSE 8080
