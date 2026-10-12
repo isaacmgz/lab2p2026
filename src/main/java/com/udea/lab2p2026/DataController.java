@@ -1,6 +1,7 @@
 package com.udea.lab2p2026;
 
 import com.github.javafaker.Faker;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
@@ -10,6 +11,9 @@ import java.util.Locale;
 
 @RestController
 public class DataController {
+    @Value("${app.commit}")
+    private String commit;
+
     @GetMapping("/")
     public String healthCheck() {
         return "HEALTH CHECK OK!";
@@ -18,6 +22,11 @@ public class DataController {
     @GetMapping("/version")
     public String version() {
         return "The actual version is 1.0.0";
+    }
+
+    @GetMapping("/commit")
+    public String commit() {
+        return commit;
     }
 
     @GetMapping("/nations")
