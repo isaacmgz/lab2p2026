@@ -107,3 +107,35 @@ jobs:
           tags: |
             docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  #Deploy's job: Render pulls the exact image pushed by the docker job
+  deploy:
+    needs: docker
+    name: Deploy to Render
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.RENDER_SERVICE_URL }}
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          IMAGE: docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: curl -fsS -X POST --get "$RENDER_DEPLOY_HOOK_URL" --data-urlencode "imgURL=$IMAGE"
+      #Free instances cold-start and the new image takes a while to roll out, so poll until it answers
+      - name: Smoke test deployed service
+        env:
+          SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 30 "$SERVICE_URL/" | grep -q "HEALTH CHECK OK!"; then
+              curl -fsS "$SERVICE_URL/version"
+              echo
+              exit 0
+            fi
+            echo "Attempt $attempt: service not ready, retrying in 20s"
+            sleep 20
+          done
+          echo "Service did not become healthy" >&2
+          exit 1
